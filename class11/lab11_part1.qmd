@@ -1,0 +1,31 @@
+---
+title: "Lab11 Part 1"
+author: "Nate Tran"
+format: pdf
+---
+
+# Section 1: Identify genetic variants of interest
+
+## Q1
+The 4 candidate SNPs are rs12936231, rs8067378, rs9303277, and rs7216389.
+
+## Q2
+These variants overlap or affect ZPBP2, IKZF3, and GSDMB.
+
+## Q3
+rs8067378 is located in chromosome 17 and the different alleles range from 39,894,595 to 39,895,595.
+
+## Q4
+Three genes downstream of rs8067378 are NR1D1, MSL1, and WIPF2.
+
+## Q5
+9/64, or 14%, of the MXL population is homozygous for the asthma-associated SNP.
+
+## Q6
+The genotype of HG00109 is G|G, homozygous for the asthma-associated SNP.
+
+
+# Section 2: Initial RNA-seq Analysis
+
+## Q7
+There are 3863 sequences in the first file. The filesize is 741.9 kb and the filetype is fastqsanger

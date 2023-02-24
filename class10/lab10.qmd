@@ -1,0 +1,189 @@
+---
+title: "lab10"
+author: "Nate Tran"
+format: pdf
+---
+#Candy Dataset
+```{r}
+candy <- read.csv("candy-data.csv", row.names=1)
+library(skimr)
+skim(candy)
+```
+
+## Q1
+There are 85 candy types in the dataset.
+```{r}
+dim(candy)
+```
+
+
+## Q2
+There are 38 fruity candy types in the dataset.
+```{r}
+sum(candy$fruity)
+```
+
+## Q3
+Favorite is Rolo and it has a winpercent of 65.7%.
+```{r}
+candy["Rolo",]$winpercent
+```
+
+## Q4
+The winpercent of Kit Kat is 76.8%
+
+```{r}
+candy["Kit Kat",]$winpercent
+```
+
+## Q5
+Thee winpercent of Tootsie Roll Snack Bars is 49.7%.
+```{r}
+candy["Tootsie Roll Snack Bars",]$winpercent
+```
+
+## Q6
+winpercent seems to be on a different scale to the majority of the other columns.
+```{r}
+skim(candy)
+```
+
+## Q7
+A zero represents that the candy type is not chocolate and a one represents that it is chocolate.
+
+## Q8
+Plotted below
+```{r}
+hist(candy$winpercent)
+```
+
+## Q9
+The distribution is not symmetrical.
+
+## Q10
+The center of the distribution is below 50%.
+
+## Q11
+Chocolate candy is higher ranked than fruity candy on average.
+```{r}
+win.choc <- candy$winpercent[as.logical(candy$chocolate)]
+win.fruit <- candy$winpercent[as.logical(candy$fruity)]
+mean(win.choc) > mean(win.fruit)
+```
+
+## Q12
+Yes, this difference is statistically significant.
+```{r}
+t.test(win.choc, win.fruit)
+```
+
+# Overall Candy Rankings
+
+## Q13
+The five least liked candies are Nik L Nip, Boston Baked Beans, Chiclets, Super Bubble, and Jawbusters.
+```{r}
+ord.idx <- order(candy$winpercent)
+head(candy[ord.idx,])
+```
+
+## Q14
+The five most liked candies are Reese's pieces, Snickers, Kit Kats, Twix, and Reese's Miniatures.
+```{r}
+tail(candy[ord.idx,])
+```
+
+# Making Useful barplots
+
+## Q15
+
+```{r}
+library(ggplot2)
+ggplot(candy) +
+  aes(winpercent, reorder(rownames(candy), winpercent)) +
+  geom_col()
+```
+
+# Coloring barplots
+
+```{r}
+my_cols=rep("black", nrow(candy))
+my_cols[as.logical(candy$chocolate)] = "chocolate"
+my_cols[as.logical(candy$bar)] = "brown"
+my_cols[as.logical(candy$fruity)] = "red"
+```
+
+```{r}
+ggplot(candy) + 
+  aes(winpercent, reorder(rownames(candy),winpercent)) +
+  geom_col(fill=my_cols) +
+  ylab("Candy Type")
+```
+
+## Q17
+The worst ranked chocolate candy is Sixlets
+
+## Q18
+The best ranked fruity candy is Starburst
+
+# Pricepercent
+
+## Q19
+The highest ranked candy for the least amount of money is Reese's Miniatures.
+```{r}
+library(ggrepel)
+
+ggplot(candy) +
+  aes(winpercent, pricepercent, label=rownames(candy)) +
+  geom_point(col=my_cols) + 
+  geom_text_repel(col=my_cols, size=3.3, max.overlaps = 5)
+```
+
+## Q20
+The least popular of the most expensive candies is Nik L Nip.
+```{r}
+ord_idx_price <- order(candy$pricepercent, decreasing=T)
+head(candy[ord_idx_price,11:12])
+```
+
+# Exploring Correlation
+
+## Q22
+Fruity and chocolate are anti-correlated
+
+## Q23
+Chocolate and winpercent are most positively correlated.
+```{r}
+library(corrplot)
+
+cij <- cor(candy)
+corrplot(cij)
+```
+
+# PCA
+```{r}
+pca <- prcomp(candy, scale=T)
+summary(pca)
+
+pc_plot <- ggplot(as.data.frame(pca$x)) +
+  aes(PC1, PC2) +
+  geom_point(size=candy$winpercent/10, col=my_cols) +
+  geom_text_repel(label=rownames(candy), col=my_cols) +
+  theme(legend.position="none") +
+  labs(title="Halloween Candy PCA Space",
+       subtitle="Colored by type: chocolate bar (dark brown), chocolate other (light brown), fruity (red), other (black)",
+       caption="Data from 538")
+```
+
+```{r}
+library(plotly)
+
+##ggplotly(pc_plot)
+```
+
+## Q24
+Fruity, hard, and bar are captured by PC1.
+```{r}
+par(mar=c(8,4,2,2))
+barplot(pca$rotation[,1], las=2, ylab="PC1 Contribution")
+```
+

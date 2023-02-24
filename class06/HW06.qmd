@@ -1,0 +1,64 @@
+---
+title: "HW6"
+author: "Nate Tran"
+format: pdf
+---
+#Q6
+
+Original Code:
+```{r}
+library(bio3d)
+s1 <- read.pdb("4AKE") # kinase with drug
+s2 <- read.pdb("1AKE") # kinase no drug
+s3 <- read.pdb("1E4Y") # kinase with drug
+s1.chainA <- trim.pdb(s1, chain="A", elety="CA")
+s2.chainA <- trim.pdb(s2, chain="A", elety="CA")
+s3.chainA <- trim.pdb(s1, chain="A", elety="CA")
+s1.b <- s1.chainA$atom$b
+s2.b <- s2.chainA$atom$b
+s3.b <- s3.chainA$atom$b
+plotb3(s1.b, sse=s1.chainA, typ="l", ylab="Bfactor")
+plotb3(s2.b, sse=s2.chainA, typ="l", ylab="Bfactor")
+plotb3(s3.b, sse=s3.chainA, typ="l", ylab="Bfactor")
+```
+
+Improved code:
+```{r}
+#Input: PDB accession code WITH "" and chain ID with ""
+#Output: plot of residue position v. Bfactor
+#Method:
+
+#1. Read PDB file into variable
+
+#2. Trim PDB file of all atoms except for alpha carbons in chain A (CA)
+
+#3. Store Bfactor as variable
+
+#4. Plot residue position v. stored Bfactor
+
+#load bio3d package into environment
+library(bio3d)
+
+#create function to automate PDB analysis
+plot_Bfactor <- function(x, chain="A"){
+  #read and store PDB file from PDB accession code
+  pdb <- read.pdb(x)
+  
+  #trim stored pdb file for alpha carbons in specified chain
+  pdb_chainA <- trim.pdb(pdb, chain, elety="CA")
+  
+  #store Bfactors so they can be easily passed to function for creation of plot
+  pdb_Bfactor <- pdb_chainA$atom$b
+  
+  #plot residue position v. Bfactor for input PDB
+  plotb3(pdb_Bfactor, sse=pdb_chainA, typ="l", ylab="Bfactor")
+}
+```
+
+Testing code:
+```{r}
+plot_Bfactor("4AKE")
+plot_Bfactor("1AKE")
+plot_Bfactor("1E4Y")
+```
+

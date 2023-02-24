@@ -1,0 +1,175 @@
+---
+title: "Lab13"
+author: "Nate Tran"
+format: pdf
+---
+
+# Reading and Exploring Data
+
+Loading in counts and meta data and confirming that they match.
+```{r}
+meta <- read.csv("GSE37704_metadata.csv")
+counts <- read.csv("GSE37704_featurecounts.csv", row.names=1)
+
+counts <- counts[,meta$id]
+
+all.equal(meta$id, colnames(counts))
+```
+
+Excluding zero count genes (genes with 0 counts in EVERY sample)
+```{r}
+counts <- counts[!rowSums(counts)==0,]
+```
+
+
+# PCA Quality Check
+
+```{r}
+pca <- prcomp(t(counts), scale=T)
+summary(pca)
+```
+
+Using ggplot to visualize PCA results
+```{r}
+library(ggplot2)
+library(ggrepel)
+
+ggplot(as.data.frame(pca$x)) +
+  aes(PC1, PC2, color = meta$condition) +
+  geom_point() +
+  geom_text_repel(label = meta$condition) +
+  xlab("PC1 (48.2% of variance)") +
+  ylab("PC2 (33.7% of variance)")
+```
+
+There seems to be a clear distinction between controls and HOXA1 KD samples. Great success!
+
+
+# DESeq Analysis
+
+Running DESeq on input counts and meta data
+```{r}
+library(DESeq2)
+
+dds <- DESeqDataSetFromMatrix(counts, meta, ~condition)
+dds <- DESeq(dds)
+```
+
+Extracting results from DESeq analysis
+```{r}
+res <- results(dds)
+head(res)
+```
+
+# Plotting DESeq Results
+
+Creating color vector to differentiate upregulated and downregulated genes.
+```{r}
+my_colors <- rep("black", nrow(res))
+my_colors[res$log2FoldChange > 2 & res$padj < 0.05] <- "blue"
+my_colors[res$log2FoldChange < -2 & res$padj < 0.05] <- "red"
+```
+
+Plotting results in summary volcano plot.
+```{r}
+ggplot(as.data.frame(res)) +
+  aes(log2FoldChange, -log(padj)) +
+  geom_point(color=my_colors, alpha=0.3) +
+  geom_vline(xintercept = c(-2,2), linetype="dashed") +
+  geom_hline(yintercept=-log(0.05), linetype="dashed")
+```
+
+# Adding Annotation Data
+
+Loading in annotation data libraries
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+Mapping alternative IDs to entries in DESeq results (gene names, symbols, entrez, uniprot)
+
+```{r}
+res$gene <- mapIds(org.Hs.eg.db, keys=rownames(res), keytype="ENSEMBL", column="GENENAME", multiVals="first")
+res$symbol <- mapIds(org.Hs.eg.db, keys=rownames(res), keytype="ENSEMBL", column="SYMBOL", multiVals="first")
+res$entrez <- mapIds(org.Hs.eg.db, keys=rownames(res), keytype="ENSEMBL", column="ENTREZID", multiVals="first")
+res$uniprot <- mapIds(org.Hs.eg.db, keys=rownames(res), keytype="ENSEMBL", column="GENENAME", multiVals="first")
+```
+
+Re-plotting volcano plot with annotation tags
+```{r}
+res_df <- as.data.frame(res)
+ggplot(as.data.frame(res)) +
+  aes(log2FoldChange, -log(padj), label = symbol) +
+  geom_point(color=my_colors, alpha=0.3) +
+  geom_vline(xintercept = c(-2,2), linetype="dashed", color = "red") +
+  geom_hline(yintercept=-log(0.05), linetype="dashed", color = "red") +
+  geom_text_repel(data=subset(res_df, (res$log2FoldChange > 2 | res$log2FoldChange < -2) & res$padj < 0.05))
+```
+
+# Pathway Analysis: KEGG
+
+```{r}
+FC <- res_df$log2FoldChange
+names(FC) <- res_df$entrez
+```
+
+Loading in necessary packages
+
+```{r}
+#/ message: false
+library(gage)
+library(gageData)
+library(pathview)
+```
+
+Using GAGE to do pathway analysis using KEGG database of human pathways/processes
+```{r}
+data(kegg.sets.hs)
+
+kegg <- gage(FC, gsets=kegg.sets.hs)
+head(kegg$less)
+head(kegg$greater)
+```
+
+Using pathview to visualize some affected pathways e.g. cell cycle and cytokine-cytokine receptor interactions
+
+```{r}
+pathview(gene.data=FC, pathway.id="hsa04110")
+```
+![Cell cycle pathway affected by HOXA1 knockdown](hsa04110.pathview.png)
+
+```{r}
+pathview(gene.data=FC, pathway.id="hsa04060")
+```
+![Cytokien-cytokine receptor interactions affected by HOXA1 knockdown](hsa04060.pathview.png)
+
+
+# Pathway Analysis: GO
+
+Using GAGE to do pathway analysis using GO database of processes
+```{r}
+data(go.sets.hs)
+
+go <- gage(FC, gsets=go.sets.hs)
+
+```
+
+Exploring GO analysis
+```{r}
+head(go$greater)
+head(go$less)
+```
+
+# Reactome Analysis
+
+```{r}
+sig_genes <- res[res$padj <= 0.05 & !is.na(res$padj), "symbol"]
+print(paste("Total number of significant genes:", length(sig_genes)))
+```
+
+Writing significantly altered genes to table file for export.
+```{r}
+write.table(sig_genes, file="significant_genes.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+

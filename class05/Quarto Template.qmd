@@ -1,0 +1,11 @@
+---
+title: "Quarto Template"
+author: "Nate Tran"
+format: html
+---
+
+## Quarto Document Hints
+"# and ##" = 1st and 2nd section header
+"```{} closed by ```" = code chunk
+"**BOLD**"
+"#|echo: false" within code chunk disables printing of code in Quarto

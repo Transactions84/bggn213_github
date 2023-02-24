@@ -1,0 +1,51 @@
+---
+title: "Lab11 Part 2"
+author: "Nate Tran"
+format: pdf
+---
+
+# Section 4: Population Scale Analysis
+
+Reading file into environment and preliminarily exploring data.
+
+```{r}
+data <- read.table("pop_rs8067378.txt")
+summary(data)
+unique(data$geno)
+```
+
+## Q13
+There are: 
+  108 samples with genotype A/A, with a median expression value of 31.25.
+  233 samples with genotype A/G, with a median expression value of 25.06.
+  121 samples with genotype G/G, with a median expression value of 20.07.
+
+```{r}
+#extracting indices for each genotype sample group
+idx_AA <- grep("A/A", data$geno)
+idx_AG <- grep("A/G", data$geno)
+idx_GG <- grep("G/G", data$geno)
+
+#determining sample size for each genotype
+length(idx_AA)
+length(idx_AG)
+length(idx_GG)
+
+#calculating median expression levels for each genotype
+median(data$exp[idx_AA])
+median(data$exp[idx_AG])
+median(data$exp[idx_GG])
+```
+
+## Q14
+Based on the below boxplot, we can infer that each G substitution at the SNP position progressively decreases the expression of ORMDL3. The SNP and its different allele states definitely affects ORMDL3 expression.
+
+```{r}
+library(ggplot2)
+
+ggplot(data) +
+  aes(geno, exp) +
+  geom_boxplot(alpha=0.4) +
+  geom_jitter(alpha=0.4)
+```
+

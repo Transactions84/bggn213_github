@@ -1,0 +1,261 @@
+---
+title: "lab12"
+author: "Nate Tran"
+format: pdf
+---
+
+# DESeq2 Required Inputs
+
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <-  read.csv("airway_metadata.csv")
+```
+
+Exploring data
+
+```{r}
+head(counts)
+metadata
+```
+
+```{r}
+metadata$id == colnames(counts)
+all.equal(metadata$id, colnames(counts))
+```
+
+## Q1
+
+There are 38694 genes in the dataset.
+
+## Q2
+
+There are 4 control cell lines
+
+# Initial Analysis
+
+Grouping controls and calculating mean for control sample gene expression.
+
+## Q3
+
+Below code is more robust.
+
+```{r}
+control_idx <- metadata[metadata$dex == "control",]$id
+control_counts <- counts[,control_idx]
+control_means <- rowMeans(control_counts)
+```
+
+Grouping treated conditions and calculating mean for treated sample gene expression.
+
+## Q4
+
+Followed same procedure below for treated samples.
+
+```{r}
+treated_idx <- metadata[metadata$dex == "treated",]$id
+treated_counts <- counts[,treated_idx]
+treated_means <- rowMeans((treated_counts))
+```
+
+Combining these two dataframes of mean expression for brevity.
+
+```{r}
+mean_counts <- cbind.data.frame(control_means, treated_means)
+```
+
+## Q5a
+
+```{r}
+plot(mean_counts)
+```
+
+## Q5b
+
+I would use geom_point in ggplot2.
+
+Plotting with ggplot2
+
+```{r}
+library(ggplot2)
+
+ggplot(mean_counts) +
+  aes(control_means, treated_means) +
+  geom_point()
+```
+
+Building logarithmic plot to view more points.
+
+```{r}
+plot(mean_counts, log="xy")
+```
+
+Adding log2FC to mean_counts
+
+```{r}
+mean_counts$log2fc <- log2(mean_counts$treated_means/mean_counts$control_means)
+```
+
+## Q7
+
+The purpose of the arr.ind argument returns both the row and column indices. We need to use the unique() function so we can find rows where one or two 0 values are located.
+
+Cleaning results of NaN and -Inf from weird math.
+
+```{r}
+my_counts <- mean_counts[(rowSums(mean_counts[,1:2] == 0) == 0),]
+```
+
+Counting how many genes are up or downregulated
+
+```{r}
+up_idx <- my_counts$log2fc > 2
+down_idx <- my_counts$log2fc < -2
+
+sum(up_idx)
+sum(down_idx)
+```
+
+## Q8
+
+There are 250 upregulated genes
+
+## Q9
+
+There are 367 downregulated genes
+
+## Q10
+
+We do not trust all these results because we have not taken into account statistical significance.
+
+# DESeq2 Analysis
+
+```{r}
+#/ message: false
+library(DESeq2)
+
+dds <- DESeqDataSetFromMatrix(counts, metadata, ~dex)
+```
+
+Running DESeq on dataset
+
+```{r}
+dds <- DESeq(dds)
+```
+
+Getting results from DESeq run
+
+```{r}
+res <- results(dds)
+res
+```
+
+Making volcano plot of DESeq2 results
+
+```{r}
+plot(res$log2FoldChange, -log(res$padj))
+```
+
+Using ggplot2 to make same volcano plot
+
+```{r}
+library(ggplot2)
+
+res_df <- as.data.frame(res)
+
+#making color vectors for points
+my_colors <- rep("black", nrow(res))
+my_colors[res$log2FoldChange > 2 & res$padj < 0.05] <- "blue"
+my_colors[res$log2FoldChange < -2 & res$padj < 0.05] <- "red"
+
+
+ggplot(as.data.frame(res)) +
+  aes(res$log2FoldChange, -log(res$padj)) +
+  geom_vline(xintercept=c(2, -2), col="red", linetype="dashed") + geom_hline(yintercept=2.9957, col="red", linetype="dashed") +
+  geom_point(col=my_colors,alpha=0.3)
+```
+
+# Adding Annotation Data
+
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+
+columns(org.Hs.eg.db)
+```
+
+```{r}
+res$symbol <- mapIds(org.Hs.eg.db,
+                     keys=row.names(res),
+                     keytype="ENSEMBL",
+                     column="SYMBOL", 
+                     multiVals="first")
+```
+
+## Q11
+
+Adding more gene annotations here
+
+```{r}
+res$entrez <- mapIds(org.Hs.eg.db, key=rownames(res), keytype="ENSEMBL", column="ENTREZID", multiVals= "first")
+
+res$gene <- mapIds(org.Hs.eg.db, key=rownames(res), keytype="ENSEMBL", column="GENENAME", multiVals= "first")
+
+res$uniprot <- mapIds(org.Hs.eg.db, key=rownames(res), keytype="ENSEMBL", column="GENENAME", multiVals= "first")
+```
+
+```{r}
+ord <- order(res$padj)
+```
+
+Writing new csv file with DESeq2 results
+
+```{r}
+write.csv(res[ord,], "deseq_results.csv")
+```
+
+```{r}
+library(ggplot2)
+library(ggrepel)
+
+res_df <- as.data.frame(res)
+
+ggplot(res_df) +
+  aes(x=log2FoldChange, y=-log(padj), label=symbol) +
+  geom_vline(xintercept=c(2, -2), col="red", linetype="dashed") + geom_hline(yintercept=2.9957, col="red", linetype="dashed") +
+  geom_point(col=my_colors,alpha=0.3) +
+  geom_text_repel(data=subset(res_df, (res_df$log2FoldChange > 2 | res_df$log2FoldChange < -2) & res_df$padj < 0.05), max.overlaps = 30)
+```
+
+## Pathway Analysis
+
+```{r}
+FC <- res_df$log2FoldChange
+names(FC) <- res_df$entrez
+```
+
+Loading in necessary packages
+
+```{r}
+#/ message: false
+library(gage)
+library(gageData)
+library(pathview)
+```
+
+```{r}
+data(kegg.sets.hs)
+
+gs <- gage(FC, gsets=kegg.sets.hs)
+attributes(gs)
+head(gs$less)
+```
+
+Using pathview to visualize affected pathways
+
+```{r}
+pathview(gene.data=FC, pathway.id="hsa05310")
+```
+
+![Pathview visualization of asthma-related signaling pathway](hsa05310.pathview.png)
+
+

@@ -1,0 +1,156 @@
+---
+title: "lab09"
+author: "Nate Tran"
+format: pdf
+---
+
+# Exploring the PDB
+
+```{r}
+data <- read.csv("Data_Export_Summary.csv")
+knitr::kable(data)
+## Creating function for removing commas and summing numbers
+sum_clean <- function(x){
+  sum(as.numeric(gsub(",", "", x)))
+}
+
+sum_clean(data$X.ray) ## test of sum_clean returns correct value
+```
+
+
+## Q1
+85.9% of the PDB structures are solved by X-ray and 7.1% are solved by EM.
+
+```{r}
+100*(sum_clean(data$X.ray)/sum_clean(data$Total))
+100*(sum_clean(data$EM)/sum_clean(data$Total))
+```
+
+## Q2
+86.9% of structures are protein only.
+
+```{r}
+100*(data$Total[1]/sum_clean(data$Total))
+```
+
+## Q3
+There are 1286 HIV-1 protease structures in the PDB.
+
+# Mol* Practice
+
+## Q4
+We only see one atom per water molecule because the resolution of the structure is not high enough to capture hydrogen atoms.
+
+## Q5
+Water molecule 308
+
+## Q6
+![A snapshot of HIV-1 protease (PDB code: 1HSG) highlighting two D25 residues and water molecule 308](1HSG.png)
+
+
+# Intro to Biod3D
+
+```{r}
+library(bio3d)
+```
+
+```{r}
+pdb <- read.pdb("1hsg")
+pdb
+```
+
+## Q7
+There are 198 residues.
+
+## Q8
+MK1 is a non-protein residue.
+
+## Q9
+There are 2 protein chains.
+
+# Normal Mode Analysis (NMA)
+
+```{r}
+adk <- read.pdb("6s36")
+adk
+```
+
+```{r}
+## performing NMA on adk
+nma_adk <- nma(adk)
+
+## plotting results of NMA
+plot(nma_adk)
+```
+
+```{r}
+mktrj(nma_adk, file="adk_nma.pdb")
+```
+
+# Comparative Structure Analysis of ADK
+
+## Q10
+"msa" is only found on BioConductor
+
+## Q11
+"bio3d-view" is not found on BioConductor or CRAN
+
+## Q12
+True
+
+
+```{r}
+library(bio3d)
+aa <- get.seq("1AKE_A")
+aa
+```
+
+## Q13
+There are 214 amino acids in this sequence.
+
+```{r}
+##b <- blast.pdb(aa)
+##b
+```
+
+```{r}
+##hits <- plot(b)
+##hits
+```
+
+```{r}
+##hits
+```
+
+```{r}
+hits <- NULL
+hits$pdb.id <- c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+```{r}
+pdbs <- pdbaln(files, fit=T, exefile="msa")
+```
+
+```{r}
+ids <- basename.pdb(pdbs$id)
+
+##plot(pdbs, labels=ids)
+```
+
+```{r}
+anno <- pdb.annotate(ids)
+unique(anno$source)
+```
+
+```{r}
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+# Trajectory visualization
+
+```{r}
+pc1 <- mktrj(pc.xray, pc=1, file="pc_1.pdb")
+```
+
