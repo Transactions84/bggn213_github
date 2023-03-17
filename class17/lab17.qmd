@@ -1,0 +1,238 @@
+---
+title: "lab17"
+author: "Nate Tran"
+format: pdf
+---
+# Importing and Exploring Data
+
+```{r}
+vax <- read.csv("covid19vaccinesbyzipcode_test.csv")
+head(vax)
+tail(vax)
+```
+
+## Q1
+persons_fully_vaccinated column
+
+## Q2
+zip_code_tabulation_area column
+
+## Q3
+Earliest date is 01/05/2021 or 2021-01-05
+
+## Q4
+Latest date is 03/07/2023 or 2023-03-07
+
+```{r}
+skimr::skim(vax)
+```
+
+## Q5
+There are 13 numeric columns
+
+```{r}
+sum(is.na(vax$persons_fully_vaccinated))
+sum(is.na(vax$persons_fully_vaccinated))/nrow(vax)
+```
+
+## Q6
+There are 16621 NA values in persons_fully_vaccinated column
+
+## Q7
+8.3% of persons_fully_vaccinated values are missing
+
+## Q8
+The data might be missing because some counties may not have had statistics taken at certain earlier dates e.g. 2021
+
+
+# Working with Dates
+
+```{r}
+library(lubridate)
+```
+
+Converting date data into lubridate format
+
+```{r}
+vax$as_of_date <-  ymd(vax$as_of_date)
+```
+
+Performing math with dates is possible now!
+
+```{r}
+today() - vax$as_of_date[1]
+vax$as_of_date[nrow(vax)] - vax$as_of_date[1]
+length(unique(vax$as_of_date))
+```
+
+## Q9
+791 days have passed since the last update.
+
+## Q10
+There are 114 unique dates.
+
+
+# Working with ZIP Codes
+Using zipcodeR package for analysis of zip code data
+
+```{r}
+library(zipcodeR)
+```
+
+```{r}
+geocode_zip("92037")
+zip_distance("92037", "92109")
+reverse_zipcode(c("92037", "92109"))
+```
+
+Pulling data for all zip codes in dataset
+```{r}
+#data_zip <- reverse_zipcode(vax$zip_code_tabulation_area)
+```
+
+
+# Focus on the SD Area
+
+Using dplyr package
+
+```{r}
+library(dplyr)
+
+sd <- filter(vax, county == "San Diego")
+
+nrow(sd)
+
+sd_10k_pop <- filter(vax, county == "San Diego" & vax$age5_plus_population > 10000)
+```
+
+```{r}
+length(unique(sd$zip_code_tabulation_area))
+sd[which.max(sd$age12_plus_population),]$zip_code_tabulation_area
+```
+
+## Q11
+There are 107 distinct zip codes listed for SD county.
+
+## Q12
+92154 has the largest 12+ population.
+
+```{r}
+sd_2_28 <- filter(sd, sd$as_of_date == "2023-02-28")
+```
+
+```{r}
+sd_2_28_zeros <- sd_2_28
+sd_2_28_zeros[is.na(sd_2_28$percent_of_population_fully_vaccinated),]$percent_of_population_fully_vaccinated <- 0
+```
+
+```{r}
+mean(sd_2_28_zeros$percent_of_population_fully_vaccinated)
+```
+
+## Q13
+The average percent of population fully vaccinated is 68.48%.
+
+## Q14
+Summary figure below
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+ggplot(sd_2_28) +
+  aes(percent_of_population_fully_vaccinated) +
+  geom_histogram(binwidth = .10) +
+  labs(title = "Histogram of Vaccination Rates Across SD County", subtitle = "as of 2023-02-28") +
+  xlab("Percent of Population Fully Vaccinated in Given Zip Code") +
+  ylab("Count (Zip Codes)")
+```
+
+# Focus on UCSD/La Jolla
+
+```{r}
+ucsd <- filter(sd, zip_code_tabulation_area=="92037")
+```
+
+## Q15
+Graph below
+
+```{r}
+ggplot(ucsd) +
+  aes(as_of_date, percent_of_population_fully_vaccinated) +
+  geom_point() +
+  geom_line(group=1) +
+  ylim(c(0,1)) +
+  labs(x="Date", y="Percent Vaccinated", title="Vaccination Rate of La Jolla CA 92037")
+```
+
+# Comparing UCSD to Similar Sized Areas
+
+```{r}
+vax_compare <- filter(vax, vax$age5_plus_population > 36144 & as_of_date == "2023-02-28")
+mean(vax_compare$percent_of_population_fully_vaccinated)
+```
+
+## Q16
+See below
+
+```{r}
+ggplot(ucsd) +
+  aes(as_of_date, percent_of_population_fully_vaccinated) +
+  geom_point() +
+  geom_line(group=1) +
+  ylim(c(0,1)) +
+  labs(x="Date", y="Percent Vaccinated", title="Vaccination Rate of La Jolla CA 92037") +
+  geom_hline(yintercept = 0.7213907, linetype="dashed", col="red")
+```
+
+```{r}
+skimr::skim(vax_compare)
+```
+
+## Q17
+Min:38.04%, 1st quartile: 64.58%, mean: 72.14%, median: 71.81%, 3rd quartile: 79.07%, Max: 100%
+
+## Q18
+See below
+
+```{r}
+ggplot(vax_compare) +
+  aes(percent_of_population_fully_vaccinated) +
+  geom_histogram() +
+  xlim(c(0,1))
+```
+
+```{r}
+vax %>% filter(as_of_date == "2023-02-28") %>%  
+  filter(zip_code_tabulation_area=="92040") %>%
+  select(percent_of_population_fully_vaccinated)
+
+vax %>% filter(as_of_date == "2023-02-28") %>%  
+  filter(zip_code_tabulation_area=="92109") %>%
+  select(percent_of_population_fully_vaccinated)
+```
+
+## Q19
+They are below the average value calculated
+
+## Q20
+See below
+
+```{r}
+vax_compare_all <- filter(vax, vax$age5_plus_population > 36144)
+```
+
+Plotting using ggplot
+
+```{r}
+ggplot(vax_compare_all) +
+  aes(as_of_date, percent_of_population_fully_vaccinated, group=zip_code_tabulation_area) +
+  geom_line(alpha=0.2, col="blue") +
+  ylim(c(0,1)) +
+  labs(x="Date", y="Percent Vaccinated", title="Vaccination Rates across California", subtitle="Only areas with pop > 36k are shown") +
+  geom_hline(yintercept=0.7214, linetype="dashed", col = "red")
+```
+
+## Q21
+Time to mask up after Spring Break :^)

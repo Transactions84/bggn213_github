@@ -1,0 +1,105 @@
+---
+title: "lab16"
+author: "Nate Tran"
+format: pdf
+---
+Reading in data using tximport
+
+```{r}
+library(tximport)
+library(rhdf5)
+
+folders <- dir(pattern="SRR21568*")
+samples <- sub("_quant", "", folders)
+files <- file.path( folders, "abundance.h5" )
+names(files) <- samples
+
+txi.kallisto <- tximport(files, type = "kallisto", txOut = TRUE)
+```
+
+
+Filtering for transcripts with no reads in any sample or with no change over any samples
+
+```{r}
+data_idx <- rowSums(txi.kallisto$counts) > 0
+data <- txi.kallisto$counts[data_idx,]
+
+data_idx2 <- apply(data, 1, sd) > 0
+data2 <- data[data_idx2,]
+```
+
+
+Running PCA
+
+```{r}
+pca_data2 <- prcomp(t(data2), scale=T)
+```
+
+
+Plotting PCA Results
+
+```{r}
+library(ggplot2)
+
+columns <- data.frame(condition = factor(rep(c("control", "treatment"), each = 2)))
+rownames(columns) <- colnames(txi.kallisto$counts)
+
+input <- as.data.frame(pca_data2$x)
+input$Condition <- as.factor(columns$condition)
+
+ggplot(input) +
+  aes(PC1, PC2, col=Condition) +
+  geom_point() +
+  geom_text(label=rownames(input)) +
+  theme_bw()
+
+ggplot(input) +
+  aes(PC1, PC3, col=Condition) +
+  geom_point() +
+  geom_text(label=rownames(input)) +
+  theme_bw()
+
+ggplot(input) +
+  aes(PC2, PC3, col=Condition) +
+  geom_point() +
+  geom_text(label=rownames(input)) +
+  theme_bw()
+```
+
+
+Using DESeq2 for Differential Gene Expression Analysis
+
+```{r}
+library(DESeq2)
+
+test <- data.frame(condition = factor(rep(c("control", "treatment"), each = 2)))
+rownames(test) <- colnames(txi.kallisto$counts)
+
+#confirm that rownames of colData and colnames of countsData are the same
+
+all.equal(rownames(test), colnames(txi.kallisto$counts))
+
+dds <- DESeqDataSetFromTximport(txi.kallisto, test, ~condition)
+dds <- DESeq(dds)
+```
+
+Viewing results of DESeq analysis
+
+```{r}
+res <- results(dds)
+
+library(ggrepel)
+
+colors_DE <- rep("black", nrow(res))
+colors_DE[res$log2FoldChange > 2 & res$padj < 0.05] <- "blue"
+colors_DE[res$log2FoldChange < -2 & res$padj < 0.05] <- "red"
+
+res_df <- as.data.frame(res)
+
+ggplot(res_df) +
+  aes(log2FoldChange, -log(padj)) +
+  geom_point(color=colors_DE, alpha=0.3) +
+  geom_vline(xintercept = c(-2,2), linetype="dashed", color = "red") +
+  geom_hline(yintercept=-log(0.05), linetype="dashed", color = "red")
+```
+

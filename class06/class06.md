@@ -1,0 +1,91 @@
+class06
+================
+Nate Tran
+
+\#Q1
+
+``` r
+##creating preliminary function grade() and testing with reduced dataset
+
+student1 <- c(100, 100, 100, 100, 100, 100, 100, 90)
+student2 <- c(100, NA, 90, 90, 90, 90, 97, 80)
+student3 <- c(90, NA, NA, NA, NA, NA, NA, NA)
+
+##input: vector of nums
+##output: numerical average
+##method: replace missing scores with score 0, drop lowest score, then calculate average of scores
+
+grade <- function(x){
+  ##create temporary variable to adjust input vector
+  y <- x
+  
+  ##convert "NA" values to 0 to avoid errors in calculating average with mean()
+  y[is.na(y)] <- 0
+  
+  ##-which.min(x) returns student scores EXCLUDING the minimum score, then taking the average with mean()
+  mean(y[-which.min(y)])
+}
+```
+
+``` r
+##testing function grade() on example class gradebook
+gradebook <- read.csv("https://tinyurl.com/gradeinput", row.names = 1)
+
+##using apply function to grade all students in gradebook (apply function grade() over rows of gradebook)
+final_scores <- apply(gradebook, c(1), grade)
+```
+
+\#Q2
+
+``` r
+which.max(final_scores)
+```
+
+    student-18 
+            18 
+
+``` r
+max(final_scores)
+```
+
+    [1] 94.5
+
+Student 18 scored the highest in the gradebook with a score of 94.5.
+
+\#Q3
+
+``` r
+##create variable of gradebook replacing value NA with 0
+mask <- gradebook
+mask[is.na(mask)] <- 0
+
+hw_avgs <- apply(mask, 2, mean)
+which.min(hw_avgs)
+```
+
+    hw2 
+      2 
+
+``` r
+min(hw_avgs)
+```
+
+    [1] 72.8
+
+HW2 was toughest on students, where they scored 72.8 on average.
+
+\#Q4
+
+``` r
+apply(mask, 2, cor, y = final_scores)
+```
+
+          hw1       hw2       hw3       hw4       hw5 
+    0.4250204 0.1767780 0.3042561 0.3810884 0.6325982 
+
+HW5 was more predictive of a student’s overall score, with a pearson
+correlation r = 0.633.
+
+\#Q5
+
+Submitted!

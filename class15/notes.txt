@@ -1,0 +1,4 @@
+This is just the basic nano text editor.
+AWS instance ID: i-00eac67ca0186ee1b
+Public ssh internet ID: ec2-34-211-32-166.us-west-2.compute.amazonaws.com
+
