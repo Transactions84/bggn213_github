@@ -1,7 +1,7 @@
 ---
 title: "class05"
 author: "Nate Tran"
-format: pdf
+format: gfm
 ---
 #install.packages("ggplot2")
 #install.packages("gapminder")
