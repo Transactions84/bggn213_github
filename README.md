@@ -22,3 +22,5 @@ My classwork from [BGGN213](https://bioboot.github.io/bggn213_W23/) at UC San Di
 - Class 16 [Using Cloud Computing to Analyze Sequencing Data](https://github.com/Transactions84/bggn213_github/blob/main/class16/lab16.md)
 
 - Class 17 [Vaccination Rates in San Diego](https://github.com/Transactions84/bggn213_github/blob/main/class17/lab17.md)
+
+- Class 19 [Pertussis Vaccination Analysis](https://github.com/Transactions84/bggn213_github/blob/main/class19/lab19.md)
